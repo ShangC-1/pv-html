@@ -127,9 +127,11 @@ function buildPanels(){
   const firstKey=SKEYS[0];
   const allFeats=[];
   for(const k of SKEYS) allFeats.push(...DATA.scenarios[k].features);
-  const lats=allFeats.map(f=>f.a),lons=allFeats.map(f=>f.o);
-  const gMinLat=Math.min(...lats),gMaxLat=Math.max(...lats);
-  const gMinLon=Math.min(...lons),gMaxLon=Math.max(...lons);
+  let gMinLat=Infinity,gMaxLat=-Infinity,gMinLon=Infinity,gMaxLon=-Infinity;
+  for(const f of allFeats){
+    if(f.a<gMinLat)gMinLat=f.a;if(f.a>gMaxLat)gMaxLat=f.a;
+    if(f.o<gMinLon)gMinLon=f.o;if(f.o>gMaxLon)gMaxLon=f.o;
+  }
   const cd=0.01;
   const cX=Math.ceil((gMaxLon-gMinLon)/cd)+1;
   const cY=Math.ceil((gMaxLat-gMinLat)/cd)+1;
