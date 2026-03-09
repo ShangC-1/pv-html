@@ -10,12 +10,10 @@
 :root{--bg:#0a0e17;--sf:#111827;--bd:#1e293b;--tx:#e2e8f0;--dm:#64748b;--ac:#f59e0b;--ac2:#38bdf8}
 body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
 
-/* ── Header ── */
 header{padding:20px 32px 16px;display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--bd)}
 header h1{font-size:22px;font-weight:700;letter-spacing:-0.03em}
 header .sub{font-size:12px;color:var(--dm);font-family:'JetBrains Mono',monospace}
 
-/* ── Controls bar ── */
 .ctrl{padding:16px 32px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:24px;flex-wrap:wrap}
 .ctrl-year{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--ac);min-width:90px}
 .ctrl-sl{flex:1;min-width:200px;max-width:500px}
@@ -29,13 +27,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;heigh
 .cbtn.active{border-color:var(--ac);color:var(--ac);background:rgba(245,158,11,0.08)}
 .cbtn svg{width:12px;height:12px;fill:currentColor}
 
-/* ── 4-panel maps ── */
 .panels{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--bd)}
 .panel{position:relative;height:60vh;overflow:hidden;border-right:1px solid var(--bd)}.panel:last-child{border-right:none}
 .panel canvas{position:absolute;top:0;left:0;image-rendering:pixelated}
 .panel-label{position:absolute;top:12px;left:12px;font-size:13px;font-weight:700;color:var(--tx);background:rgba(10,14,23,0.85);padding:4px 10px;border-radius:4px;border:1px solid var(--bd);z-index:5;letter-spacing:-0.02em}
 
-/* ── Summary table ── */
 .summary{padding:24px 32px}
 .summary .pt{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--dm);margin-bottom:14px}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -45,12 +41,10 @@ tbody tr:hover{background:rgba(255,255,255,0.02)}
 td.scenario-name{font-family:'DM Sans',sans-serif;font-weight:600;color:var(--ac2)}
 td.num{text-align:right}
 
-/* ── Legend ── */
 .legend{padding:12px 32px 24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
 .li{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dm)}
 .lw{width:12px;height:12px;border-radius:2px;flex-shrink:0}
 
-/* ── Tooltip ── */
 .tp{position:fixed;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;font-size:12px;pointer-events:none;opacity:0;transition:opacity 0.12s;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-width:220px}
 .tp.on{opacity:1}
 .tr{display:flex;justify-content:space-between;gap:16px;margin:2px 0}
@@ -84,7 +78,7 @@ td.num{text-align:right}
 <div class="pt">Cumulative Statistics at <span id="sy">2025</span></div>
 <table>
 <thead>
-<tr><th>Scenario</th><th style="text-align:right">Physical GW</th><th style="text-align:right">Eff GW</th><th style="text-align:right">Active Hubs</th><th style="text-align:right">Active Sites</th><th style="text-align:right">Land Used %</th></tr>
+<tr><th>Scenario</th><th style="text-align:right">Physical GW</th><th style="text-align:right">Eff GW</th><th style="text-align:right">Cost ($B)</th><th style="text-align:right">Active Hubs</th><th style="text-align:right">Active Sites</th><th style="text-align:right">Land Used %</th></tr>
 </thead>
 <tbody id="tb"></tbody>
 </table>
@@ -121,8 +115,6 @@ function init(){
 
 function buildPanels(){
   const container=document.getElementById('panels');
-  // Compute shared grid bounds from first scenario
-  const firstKey=SKEYS[0];
   const allFeats=[];
   for(const k of SKEYS) allFeats.push(...DATA.scenarios[k].features);
   let gMinLat=Infinity,gMaxLat=-Infinity,gMinLon=Infinity,gMaxLon=-Infinity;
@@ -147,7 +139,6 @@ function buildPanels(){
     div.appendChild(cv);
     container.appendChild(div);
 
-    // Build grid
     const grid=new Array(cX*cY).fill(null);
     for(const f of sc.features){
       const gx=Math.round((f.o-gMinLon)/cd),gy=Math.round((gMaxLat-f.a)/cd);
@@ -164,7 +155,6 @@ function buildPanels(){
       gMinLat,gMaxLat,gMinLon,gMaxLon};
   }
 
-// Fit canvases
   setTimeout(()=>{
     for(const key of SKEYS){
       const p=panels[key];
@@ -222,13 +212,16 @@ function renderPanel(key){
 
 function getStats(key){
   const p=panels[key];
+  const sc=DATA.scenarios[key];
   let phys=0,units=0,cap=0;
   for(let i=0;i<p.grid.length;i++){
     const c=p.grid[i];if(!c)continue;cap+=c.c;
     let mw=c.e;if(step>0)for(let t=0;t<step;t++)mw+=c.b[t];
     if(mw>0.01){phys+=mw;units++;}
   }
-  return {phys,units,cap,hubs:p.hubs.length};
+  let cost=sc.hub_cost;
+  if(step>0)for(let t=0;t<step;t++)cost+=sc.period_cost[t];
+  return {phys,units,cap,hubs:p.hubs.length,cost};
 }
 
 function upd(s){
@@ -241,7 +234,6 @@ function upd(s){
 
   for(const key of SKEYS) renderPanel(key);
 
-  // Update table
   const tb=document.getElementById('tb');
   tb.innerHTML='';
   for(const key of SKEYS){
@@ -252,6 +244,7 @@ function upd(s){
       `<td class="scenario-name">${panels[key].label}</td>`+
       `<td class="num">${(st.phys/1e3).toFixed(2)}</td>`+
       `<td class="num">${(eff/1e3).toFixed(2)}</td>`+
+      `<td class="num">${(st.cost/1e3).toFixed(1)}</td>`+
       `<td class="num">${st.hubs.toLocaleString()}</td>`+
       `<td class="num">${st.units.toLocaleString()}</td>`+
       `<td class="num">${(st.phys/st.cap*100).toFixed(1)}%</td>`;
@@ -290,7 +283,6 @@ function setupEvt(){
     for(const key of SKEYS) renderPanel(key);
   });
 
-  // Tooltip on panels
   document.querySelectorAll('.panel').forEach((panel,idx)=>{
     const key=SKEYS[idx];
     panel.addEventListener('mousemove',e=>{updTp(e,key);});
