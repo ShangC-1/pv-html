@@ -170,7 +170,7 @@ function buildPanels(){
       const p=panels[key];
       const par=p.cv.parentElement;
       const aW=par.clientWidth,aH=par.clientHeight;
-      const s=Math.min(aW/p.cv.width,aH/p.cv.height)*1.6;
+      const s=Math.min(aW/p.cv.width,aH/p.cv.height)*1.25;
       const ox=(aW-p.cv.width*s)/2,oy=(aH-p.cv.height*s)/2;
       p.cv.style.transform=`translate(${ox}px,${oy}px) scale(${s})`;
       p.cv.style.transformOrigin='0 0';
