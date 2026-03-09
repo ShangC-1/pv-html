@@ -101,14 +101,17 @@ const COL={
 };
 const LB=['2025','2026','2031','2036','2041','2046','2050'];
 const YRS=[2026,2031,2036,2041,2046,2050];
-const DATA={};
-const SKEYS=Object.keys(DATA.scenarios);
+let DATA=null;
+let SKEYS=[];
 
 let step=0,playing=false,ptimer=null,showHubs=false;
 const CP=3;
 let panels={};
 
-init();
+fetch('data.json')
+  .then(r=>r.json())
+  .then(d=>{DATA=d;SKEYS=Object.keys(DATA.scenarios);init();})
+  .catch(e=>console.error('Failed to load data:',e));
 
 function init(){
   buildPanels();
