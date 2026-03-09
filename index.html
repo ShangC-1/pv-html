@@ -78,7 +78,7 @@ td.num{text-align:right}
 <div class="pt">Cumulative Statistics at <span id="sy">2025</span></div>
 <table>
 <thead>
-<tr><th>Scenario</th><th style="text-align:right">Physical GW</th><th style="text-align:right">Eff GW</th><th style="text-align:right">Cost ($B)</th><th style="text-align:right">Active Hubs</th><th style="text-align:right">Active Sites</th><th style="text-align:right">Land Used %</th></tr>
+<tr><th>Scenario</th><th style="text-align:right">Physical GW</th><th style="text-align:right">Cost ($B)</th><th style="text-align:right">Active Hubs</th><th style="text-align:right">Active Sites</th><th style="text-align:right">Land Used %</th></tr>
 </thead>
 <tbody id="tb"></tbody>
 </table>
@@ -238,12 +238,10 @@ function upd(s){
   tb.innerHTML='';
   for(const key of SKEYS){
     const st=getStats(key);
-    const eff=st.phys*0.269;
     const tr=document.createElement('tr');
     tr.innerHTML=
       `<td class="scenario-name">${panels[key].label}</td>`+
       `<td class="num">${(st.phys/1e3).toFixed(2)}</td>`+
-      `<td class="num">${(eff/1e3).toFixed(2)}</td>`+
       `<td class="num">${(st.cost/1e3).toFixed(1)}</td>`+
       `<td class="num">${st.hubs.toLocaleString()}</td>`+
       `<td class="num">${st.units.toLocaleString()}</td>`+
