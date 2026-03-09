@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>California PV Capacity Expansion — Scenario Comparison</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0e17;--sf:#111827;--bd:#1e293b;--tx:#e2e8f0;--dm:#64748b;--ac:#f59e0b;--ac2:#38bdf8}
+body{background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── Header ── */
+header{padding:20px 32px 16px;display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--bd)}
+header h1{font-size:22px;font-weight:700;letter-spacing:-0.03em}
+header .sub{font-size:12px;color:var(--dm);font-family:'JetBrains Mono',monospace}
+
+/* ── Controls bar ── */
+.ctrl{padding:16px 32px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.ctrl-year{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:700;color:var(--ac);min-width:90px}
+.ctrl-sl{flex:1;min-width:200px;max-width:500px}
+input[type=range]{-webkit-appearance:none;width:100%;height:4px;background:var(--bd);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--ac);cursor:pointer;box-shadow:0 0 10px rgba(245,158,11,0.4)}
+.ticks{display:flex;justify-content:space-between;padding:4px 0 0}
+.tk{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dm);cursor:pointer;transition:color 0.2s}
+.tk:hover{color:var(--tx)}.tk.on{color:var(--ac);font-weight:600}
+.cbtn{display:flex;align-items:center;gap:6px;padding:7px 14px;background:0;border:1px solid var(--bd);border-radius:6px;color:var(--tx);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all 0.2s;white-space:nowrap}
+.cbtn:hover{border-color:var(--ac);color:var(--ac)}
+.cbtn.active{border-color:var(--ac);color:var(--ac);background:rgba(245,158,11,0.08)}
+.cbtn svg{width:12px;height:12px;fill:currentColor}
+
+/* ── 4-panel maps ── */
+.panels{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:1px solid var(--bd)}
+.panel{position:relative;aspect-ratio:0.55;overflow:hidden;border-right:1px solid var(--bd)}
+.panel:last-child{border-right:none}
+.panel canvas{position:absolute;top:0;left:0;image-rendering:pixelated}
+.panel-label{position:absolute;top:12px;left:12px;font-size:13px;font-weight:700;color:var(--tx);background:rgba(10,14,23,0.85);padding:4px 10px;border-radius:4px;border:1px solid var(--bd);z-index:5;letter-spacing:-0.02em}
+
+/* ── Summary table ── */
+.summary{padding:24px 32px}
+.summary .pt{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--dm);margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;padding:8px 12px;border-bottom:2px solid var(--bd);color:var(--dm);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.06em}
+tbody td{padding:8px 12px;border-bottom:1px solid rgba(30,41,59,0.5);font-family:'JetBrains Mono',monospace;font-size:13px}
+tbody tr:hover{background:rgba(255,255,255,0.02)}
+td.scenario-name{font-family:'DM Sans',sans-serif;font-weight:600;color:var(--ac2)}
+td.num{text-align:right}
+
+/* ── Legend ── */
+.legend{padding:12px 32px 24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.li{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--dm)}
+.lw{width:12px;height:12px;border-radius:2px;flex-shrink:0}
+
+/* ── Tooltip ── */
+.tp{position:fixed;background:var(--sf);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;font-size:12px;pointer-events:none;opacity:0;transition:opacity 0.12s;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-width:220px}
+.tp.on{opacity:1}
+.tr{display:flex;justify-content:space-between;gap:16px;margin:2px 0}
+.tl{color:var(--dm)}.tv{font-family:'JetBrains Mono',monospace;font-weight:600}
+</style>
+</head>
+<body>
+<header>
+<h1>California PV Capacity Expansion</h1>
+<span class="sub">V3 CF-Weighted · Scenario Comparison · 2025–2050</span>
+</header>
+
+<div class="ctrl">
+<div class="ctrl-year" id="yd">2025</div>
+<div class="ctrl-sl">
+<input type="range" id="sl" min="0" max="6" value="0" step="1">
+<div class="ticks" id="tm"></div>
+</div>
+<button class="cbtn" id="pb">
+<svg viewBox="0 0 24 24" id="pi"><polygon points="5,3 19,12 5,21"/></svg>
+<span id="pl">Play</span>
+</button>
+<button class="cbtn" id="hcb">Hubs</button>
+</div>
+
+<div class="panels" id="panels"></div>
+
+<div class="legend" id="lg"></div>
+
+<div class="summary">
+<div class="pt">Cumulative Statistics at <span id="sy">2025</span></div>
+<table>
+<thead>
+<tr><th>Scenario</th><th style="text-align:right">Physical GW</th><th style="text-align:right">Eff GW</th><th style="text-align:right">Active Hubs</th><th style="text-align:right">Active Sites</th><th style="text-align:right">Land Used %</th></tr>
+</thead>
+<tbody id="tb"></tbody>
+</table>
+</div>
+
+<div class="tp" id="tp"></div>
+
+<script>
+const COL={
+  ex:[99,102,241],
+  p:[[34,211,238],[52,211,153],[163,230,53],[250,204,21],[251,146,60],[248,113,113]],
+  bg:[10,14,23],hub:[255,255,255]
+};
+const LB=['2025','2026','2031','2036','2041','2046','2050'];
+const YRS=[2026,2031,2036,2041,2046,2050];
+const DATA={};
+const SKEYS=Object.keys(DATA.scenarios);
+
+let step=0,playing=false,ptimer=null,showHubs=false;
+const CP=3;
+let panels={};
+
+init();
+
+function init(){
+  buildPanels();
+  buildLegend();
+  buildTicks();
+  upd(0);
+  setupEvt();
+}
+
+function buildPanels(){
+  const container=document.getElementById('panels');
+  // Compute shared grid bounds from first scenario
+  const firstKey=SKEYS[0];
+  const allFeats=[];
+  for(const k of SKEYS) allFeats.push(...DATA.scenarios[k].features);
+  const lats=allFeats.map(f=>f.a),lons=allFeats.map(f=>f.o);
+  const gMinLat=Math.min(...lats),gMaxLat=Math.max(...lats);
+  const gMinLon=Math.min(...lons),gMaxLon=Math.max(...lons);
+  const cd=0.01;
+  const cX=Math.ceil((gMaxLon-gMinLon)/cd)+1;
+  const cY=Math.ceil((gMaxLat-gMinLat)/cd)+1;
+
+  for(const key of SKEYS){
+    const sc=DATA.scenarios[key];
+    const div=document.createElement('div');
+    div.className='panel';
+    const lbl=document.createElement('div');
+    lbl.className='panel-label';
+    lbl.textContent=sc.label;
+    div.appendChild(lbl);
+    const cv=document.createElement('canvas');
+    cv.width=cX*CP;cv.height=cY*CP;
+    div.appendChild(cv);
+    container.appendChild(div);
+
+    // Build grid
+    const grid=new Array(cX*cY).fill(null);
+    for(const f of sc.features){
+      const gx=Math.round((f.o-gMinLon)/cd),gy=Math.round((gMaxLat-f.a)/cd);
+      const i=gy*cX+gx;
+      if(i>=0&&i<grid.length){
+        if(!grid[i])grid[i]={e:0,b:new Float32Array(6),c:0};
+        grid[i].e+=f.e;
+        for(let t=0;t<f.b.length;t++)grid[i].b[t]+=f.b[t];
+        grid[i].c+=f.c;
+      }
+    }
+
+    panels[key]={cv,grid,cX,cY,hubs:sc.hubs,label:sc.label,
+      gMinLat,gMaxLat,gMinLon,gMaxLon};
+  }
+
+  // Fit canvases
+  requestAnimationFrame(()=>{
+    for(const key of SKEYS){
+      const p=panels[key];
+      const par=p.cv.parentElement;
+      const aW=par.clientWidth,aH=par.clientHeight;
+      const sc=Math.min(aW/p.cv.width,aH/p.cv.height)*0.95;
+      const ox=(aW-p.cv.width*sc)/2,oy=(aH-p.cv.height*sc)/2;
+      p.cv.style.transform=`translate(${ox}px,${oy}px) scale(${sc})`;
+      p.cv.style.transformOrigin='0 0';
+      p.sc=sc;p.ox=ox;p.oy=oy;
+    }
+  });
+}
+
+function renderPanel(key){
+  const p=panels[key];
+  const ctx=p.cv.getContext('2d');
+  const w=p.cX*CP,h=p.cY*CP;
+  const img=ctx.createImageData(w,h),d=img.data;
+  for(let i=0;i<d.length;i+=4){d[i]=COL.bg[0];d[i+1]=COL.bg[1];d[i+2]=COL.bg[2];d[i+3]=255;}
+
+  for(let gy=0;gy<p.cY;gy++){
+    for(let gx=0;gx<p.cX;gx++){
+      const cell=p.grid[gy*p.cX+gx];if(!cell)continue;
+      let col=null,mw=0;
+      if(step===0){if(cell.e>0.01){col=COL.ex;mw=cell.e;}}
+      else{mw=cell.e;let lp=-1;for(let t=0;t<step;t++){if(cell.b[t]>0.01){mw+=cell.b[t];lp=t;}}if(mw>0.01)col=lp>=0?COL.p[lp]:COL.ex;}
+      if(col){
+        const int=Math.min(1,mw/Math.max(cell.c*0.5,1)),a=0.3+0.7*int;
+        const r=Math.round(col[0]*a+COL.bg[0]*(1-a)),g=Math.round(col[1]*a+COL.bg[1]*(1-a)),b=Math.round(col[2]*a+COL.bg[2]*(1-a));
+        for(let py=0;py<CP;py++){for(let px=0;px<CP;px++){
+          const pi=((gy*CP+py)*w+(gx*CP+px))*4;d[pi]=r;d[pi+1]=g;d[pi+2]=b;d[pi+3]=255;
+        }}
+      }
+    }
+  }
+
+  if(showHubs){
+    const cd=0.01;
+    for(const hub of p.hubs){
+      const gx=Math.round((hub.o-p.gMinLon)/cd),gy=Math.round((p.gMaxLat-hub.a)/cd);
+      if(gx<0||gx>=p.cX||gy<0||gy>=p.cY)continue;
+      const cx2=gx*CP+Math.floor(CP/2),cy2=gy*CP+Math.floor(CP/2);
+      for(let dd=-1;dd<=1;dd++){
+        let ix,iy;
+        ix=cx2;iy=cy2+dd;if(ix>=0&&ix<w&&iy>=0&&iy<h){const pi=(iy*w+ix)*4;d[pi]=255;d[pi+1]=255;d[pi+2]=255;d[pi+3]=180;}
+        ix=cx2+dd;iy=cy2;if(ix>=0&&ix<w&&iy>=0&&iy<h){const pi=(iy*w+ix)*4;d[pi]=255;d[pi+1]=255;d[pi+2]=255;d[pi+3]=180;}
+      }
+    }
+  }
+
+  ctx.putImageData(img,0,0);
+}
+
+function getStats(key){
+  const p=panels[key];
+  let phys=0,units=0,cap=0;
+  for(let i=0;i<p.grid.length;i++){
+    const c=p.grid[i];if(!c)continue;cap+=c.c;
+    let mw=c.e;if(step>0)for(let t=0;t<step;t++)mw+=c.b[t];
+    if(mw>0.01){phys+=mw;units++;}
+  }
+  return {phys,units,cap,hubs:p.hubs.length};
+}
+
+function upd(s){
+  step=s;
+  document.getElementById('sl').value=s;
+  const yr=LB[s];
+  document.getElementById('yd').textContent=yr;
+  document.getElementById('sy').textContent=yr;
+  document.querySelectorAll('.tk').forEach((t,i)=>t.classList.toggle('on',i===s));
+
+  for(const key of SKEYS) renderPanel(key);
+
+  // Update table
+  const tb=document.getElementById('tb');
+  tb.innerHTML='';
+  for(const key of SKEYS){
+    const st=getStats(key);
+    const eff=st.phys*0.269;
+    const tr=document.createElement('tr');
+    tr.innerHTML=
+      `<td class="scenario-name">${panels[key].label}</td>`+
+      `<td class="num">${(st.phys/1e3).toFixed(2)}</td>`+
+      `<td class="num">${(eff/1e3).toFixed(2)}</td>`+
+      `<td class="num">${st.hubs.toLocaleString()}</td>`+
+      `<td class="num">${st.units.toLocaleString()}</td>`+
+      `<td class="num">${(st.phys/st.cap*100).toFixed(1)}%</td>`;
+    tb.appendChild(tr);
+  }
+}
+
+function buildTicks(){
+  const c=document.getElementById('tm');c.innerHTML='';
+  LB.forEach((l,i)=>{
+    const t=document.createElement('span');
+    t.className='tk'+(i===0?' on':'');
+    t.textContent=l;
+    t.addEventListener('click',()=>upd(i));
+    c.appendChild(t);
+  });
+}
+
+function buildLegend(){
+  const c=document.getElementById('lg');c.innerHTML='';
+  const items=[{l:'Existing PV',c:COL.ex},...COL.p.map((cl,i)=>({l:'Built '+YRS[i],c:cl}))];
+  for(const it of items){
+    const r=document.createElement('div');r.className='li';
+    const s=document.createElement('div');s.className='lw';s.style.background=`rgb(${it.c[0]},${it.c[1]},${it.c[2]})`;
+    const l=document.createElement('span');l.textContent=it.l;
+    r.appendChild(s);r.appendChild(l);c.appendChild(r);
+  }
+}
+
+function setupEvt(){
+  document.getElementById('sl').addEventListener('input',e=>upd(parseInt(e.target.value)));
+  document.getElementById('pb').addEventListener('click',()=>{playing?stopP():startP();});
+  document.getElementById('hcb').addEventListener('click',e=>{
+    showHubs=!showHubs;
+    e.currentTarget.classList.toggle('active',showHubs);
+    for(const key of SKEYS) renderPanel(key);
+  });
+
+  // Tooltip on panels
+  document.querySelectorAll('.panel').forEach((panel,idx)=>{
+    const key=SKEYS[idx];
+    panel.addEventListener('mousemove',e=>{updTp(e,key);});
+    panel.addEventListener('mouseleave',()=>{document.getElementById('tp').classList.remove('on');});
+  });
+
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'&&step<6)upd(step+1);
+    if(e.key==='ArrowLeft'&&step>0)upd(step-1);
+    if(e.key===' '){e.preventDefault();playing?stopP():startP();}
+  });
+}
+
+function updTp(e,key){
+  const tp=document.getElementById('tp');
+  const p=panels[key];
+  const rect=p.cv.parentElement.getBoundingClientRect();
+  const mx=e.clientX-rect.left,my=e.clientY-rect.top;
+  const cx2=(mx-p.ox)/p.sc,cy2=(my-p.oy)/p.sc;
+  const gx=Math.floor(cx2/CP),gy=Math.floor(cy2/CP);
+  if(gx<0||gx>=p.cX||gy<0||gy>=p.cY){tp.classList.remove('on');return;}
+  const cell=p.grid[gy*p.cX+gx];
+  if(!cell||cell.c<0.01){tp.classList.remove('on');return;}
+  let cum=cell.e;if(step>0)for(let t=0;t<step;t++)cum+=cell.b[t];
+  const lat=(p.gMaxLat-gy*0.01).toFixed(3),lon=Math.abs(p.gMinLon+gx*0.01).toFixed(3);
+  tp.innerHTML=
+    `<div style="font-weight:600;margin-bottom:4px;color:var(--ac2)">${p.label}</div>`+
+    `<div class="tr"><span class="tl">Location</span><span class="tv">${lat}°N ${lon}°W</span></div>`+
+    `<div class="tr"><span class="tl">Capacity</span><span class="tv">${cell.c.toFixed(1)} MW</span></div>`+
+    `<div class="tr"><span class="tl">Existing</span><span class="tv">${cell.e.toFixed(1)} MW</span></div>`+
+    `<div class="tr"><span class="tl">Cumulative</span><span class="tv">${cum.toFixed(1)} MW</span></div>`+
+    `<div class="tr"><span class="tl">Utilization</span><span class="tv">${(cum/cell.c*100).toFixed(0)}%</span></div>`;
+  tp.style.left=(e.clientX+16)+'px';tp.style.top=(e.clientY-10)+'px';tp.classList.add('on');
+}
+
+function startP(){
+  playing=true;document.getElementById('pl').textContent='Pause';
+  document.getElementById('pi').innerHTML='<rect x="5" y="3" width="4" height="18"/><rect x="15" y="3" width="4" height="18"/>';
+  if(step>=6)upd(0);
+  ptimer=setInterval(()=>{if(step>=6){stopP();return;}upd(step+1);},1500);
+}
+function stopP(){
+  playing=false;clearInterval(ptimer);document.getElementById('pl').textContent='Play';
+  document.getElementById('pi').innerHTML='<polygon points="5,3 19,12 5,21"/>';
+}
+</script>
+</body>
+</html>
